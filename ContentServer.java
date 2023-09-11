@@ -14,7 +14,7 @@ public class ContentServer {
         String file_location = args[1]; // file location
         int lamport_clock = 0; // lamport clock initialised at 0 to begin
 
-
+        sendRequest(file_location, server_name, lamport_clock);
 
     }
 
@@ -48,14 +48,18 @@ public class ContentServer {
 
             //send data here
             PrintWriter output = new PrintWriter(clientSocket.getOutputStream(), true);
-            
-            clientSocket.close();
+            output.println(
+                "PUT /weather.json \n" +
+                "User-Agent: ATOMClient/1/0 \n" +
+                "Content-Type: (TODO) \n" +
+                "Content-Length: (TO-DO) \n" +
+                json_contents
+                );
 
-
+            clientSocket.close(); // Close socket
         } catch (IOException e ){
             e.printStackTrace();
         }
-        
     }
 
 }
