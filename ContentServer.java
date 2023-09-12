@@ -18,8 +18,6 @@ public class ContentServer {
 
     }
 
-
-
     // Takes file name as a parameter and returns the content of said file
     private static String readFile(String file) {
         JSONObject json_from_file = new JSONObject();
@@ -43,16 +41,15 @@ public class ContentServer {
         String json_contents = readFile(file); 
 
         try {
-            ServerSocket serverSocket = new serverSocket(12345); //start content server
-            Socket clientSocket = serverSocket.accept();
+            Socket socket = new Socket(123456789); //Replace this with input from args
 
             //send data here
             PrintWriter output = new PrintWriter(clientSocket.getOutputStream(), true);
             output.println(
                 "PUT /weather.json \n" +
                 "User-Agent: ATOMClient/1/0 \n" +
-                "Content-Type: (TODO) \n" +
-                "Content-Length: (TO-DO) \n" +
+                "Content-Type: application/json" +
+                "Content-Length: " + json_contents.length() + "\n" + 
                 json_contents
                 );
 
