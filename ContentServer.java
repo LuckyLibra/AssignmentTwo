@@ -12,7 +12,6 @@ public class ContentServer {
         int lamport_clock = 0; // lamport clock initialised at 0 to begin
 
         sendRequest(file_location, server_name, lamport_clock);
-
     }
 
     // Takes file name as a parameter and returns the content of said file
@@ -25,7 +24,7 @@ public class ContentServer {
             file_content.append("\n");
 
             while ((new_line = reader.readLine()) != null) { // while file not empty add content
-                file_content.append(new_line);
+                file_content.append(" " + new_line);
                 file_content.append("\n");
             }
 
@@ -40,21 +39,25 @@ public class ContentServer {
     private static void sendRequest(String file, String server, int clock) {
         // Call readFile(file) here to get data
         String json_contents = readFile(file);
+        System.out.print(json_contents);
 
         try {
             String host_name = server.split(":")[0];
             int port_num = Integer.parseInt(server.split(":")[1]);
             Socket socket = new Socket(host_name, port_num); // Replace this with input from args
 
+            System.out.println("Socket is running, seeking to connect to " + host_name + " " + port_num);
+
             // send data here
             PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
             output.println(
-                    "PUT /weather.json \n" +
-                            "User-Agent: ATOMClient/1/0 \n" +
-                            "Content-Type: application/json \n" +
-                            "Content-Length: " + json_contents.length() + "\n" +
+                            "PUT /weather.json HTTP/1.1 \r\n" +
+                            "User-Agent: ATOMClient/1/0 \r\n" +
+                            "Content-Type: application/json \r\n" +
+                            "Content-Length: " + json_contents.length() + "\r\n " +
                             json_contents);
 
+            System.out.println("Message sent! ");
             socket.close(); // Close socket
         } catch (IOException e) {
             e.printStackTrace();

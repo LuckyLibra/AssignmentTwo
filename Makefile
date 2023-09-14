@@ -1,31 +1,16 @@
-# Makefile for compiling Java files
+JAVAC=javac
+sources = $(wildcard *.java)
+classes = $(sources:.java=.class)
 
-# Define the Java compiler
-JAVAC = javac
+all: program
 
-# Define flags for the Java compiler (Java 1.8)
-JAVACFLAGS = -source 1.8 -target 1.8
+program: $(classes)
 
-# Define the source directory
-SRC_DIR = src
+out: output
 
-# Define the output directory
-OUT_DIR = bin
+clean: rm -f *.class
 
-# Define the list of Java source files
-SOURCES = $(wildcard $(SRCDIR)/*.java)
+%.class: %.java
+	$(JAVAC) $<
 
-# Define the list of class files (generated from source files)
-CLASSES = $(SOURCES:$(SRC_DIR)/%.java=$(OUT_DIR)/%.class)
-
-# Default target (compiling all Java files)
-all: $(CLASSES)
-
-# Rule to compile a Java source file to a class file
-$(OUT_DIR)/%.class: $(SRC_DIR)/%.java
-	@mkdir -p $(OUT_DIR)
-	$(JAVAC) $(JAVACFLAGS) -d $(OUT_DIR) $<
-
-# Clean up generated class files
-clean:
-	rm -rf $(OUTDIR)
+.PHONY: all program clean jar
