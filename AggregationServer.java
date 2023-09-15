@@ -34,17 +34,15 @@ public class AggregationServer {
 
 class HandleRequest implements Runnable { // Runnable allows thread execution
     // socket here as a variable in the class
-    private Socket client_socket; //socket
+    private Socket client_socket; // socket
     private int threadID; // thread for each connect made, this way hosts are tracked
     private static int counter = 1; // counter which is increased per thread
 
-
     // function call to handle get requests
     public HandleRequest(Socket client_socket) {
-        this.client_socket = client_socket;
+        this.client_socket = client_socket; // socket connection
         counter++;
         this.threadID = counter; // counter is incremented which represents new host found
-
     }
 
     public void run() {
@@ -53,77 +51,106 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
             BufferedReader read_file = new BufferedReader(new InputStreamReader(client_socket.getInputStream()));
             PrintWriter write = new PrintWriter(client_socket.getOutputStream(), true); // get output
 
-            String incoming_message; //read
-            while ((incoming_message = read_file.readLine()) != null ) { //While file is not empty, append to string
+            String incoming_message; // read
+            while ((incoming_message = read_file.readLine()) != null) { // While file is not empty, append to string
                 request_from_file.append(incoming_message);
             }
 
             String total_message = request_from_file.toString(); // complete message as string
-            System.out.println("Received message " + total_message); //debug 
+            System.out.println("Received message " + total_message); // debug
 
-            if (total_message.contains("PUT")) { //Call put function for put request from contentserver
+            if (total_message.contains("PUT")) { // Call put function for put request from contentserver
                 putResponse(write, read_file);
-            }
-            else if (total_message.contains("GET")){ //call get for request from client
+            } else if (total_message.contains("GET")) { // call get for request from client
                 getResponse(write, read_file);
-            }
-            else {
-                //ERROR! RETURN 400 RESPONSE CODE
+            } else {
+                // ERROR! RETURN 400 RESPONSE CODE
             }
 
-            client_socket.close(); //finally close thread!
+            client_socket.close(); // finally close thread!
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public void putResponse(PrintWriter write, BufferedReader read) { //takes read and write
-        //Check if there is an Aggregation Database if not create the file
+    public void putResponse(PrintWriter write, BufferedReader read) { // takes read and write
+        // Check if there is an Aggregation Database if not create the file
         File database = new File("aggregationDatabase.txt");
-        int host_id = this.threadID;
 
-        if (database.exists()) { //first check if file exists 
-            if (database.length() == 0) {
+        if (database.exists()) { // first check if file exists
+            if (database.length() == 0) { // If file exists but has no content
+                insertIntoFile(read); // Insert json data into file
+
                 String success_message = "{'success':'true'}";
-                //First time weather data is received you should return status 201 - HTTP_CRATED
+                // First time weather data is received you should return status 201 -
+                // HTTP_CRATED
                 write.println(
-                    "HTTP/1.1 201 OK \r\n" +
-                    "Content.Length: " + success_message.length() + "\r\n" +
-                    "Content-Type: application/json \r\n " +
-                    success_message 
-                ); //Sends 201 OK Response to content server 
+                        "HTTP/1.1 201 OK \r\n" +
+                                "Content.Length: " + success_message.length() + "\r\n" +
+                                "Content-Type: application/json \r\n " +
+                                success_message); // Sends 201 OK Response to content server
             }
-            else if (database.length() > 0) { //Database already has data, so we have to search for ID to determine overwrite
-                
 
+            else if (database.length() > 0) { // Database already has data, so we have to search for ID to determine
+                                              // overwrite
+                try {
+                    BufferedReader read_database = new BufferedReader(new FileReader(database)); // Read database
+                    String line_from_database;
+                    boolean host_id_exists = false;
+
+                    while ((line_from_database = read_database.readLine()) != null) {
+                        if (line_from_database.contains("host_id: " + this.threadID)) { // Old data to overwrite located
+                            host_id_exists = true;
+                            break;
+                        }
+                    }
+
+                    if (host_id_exists == true) {
+                        removeFromDatabase(this.threadID); // ID to remove from database
+                        insertIntoFile(read); // After 'old' data is removed, add new update
+                    } else {
+                        insertIntoFile(read); // If ID not present, add to database
+                    }
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         } else {
-            System.out.println("Aggregation Database does not exist, creating aggregation database");
-            //TODO: Create file "aggregationdatabase.txt"
+            System.out.println("Aggregation Database does not exist. Creating database.");
+            createFile();
+            insertIntoFile(read);
         }
 
+        // If second update, 200 response code
 
-
-
-
-
-
-        //If second update, 200 response code
-
-
-        //If Put request but not content, 204 status code
+        // If Put request but not content, 204 status code
 
     }
 
     public void getResponse(PrintWriter write, BufferedReader read) {
-        //do stuff
+        // do stuff
     }
 
-
-    public boolean checkAlive(PrintWriter write, BufferedReader read)  { //sends a get request that checks if the server is alive
-        //sends a get request to the content server adn the content server can return a body containing the message "I am alive"
+    public boolean checkAlive(PrintWriter write, BufferedReader read) { // sends a get request that checks if the server
+                                                                        // is alive
+        // sends a get request to the content server adn the content server can return a
+        // body containing the message "I am alive"
 
         return false;
+    }
+
+    public void createFile() { // creates databaseAggregation.txt file
+        File new_database = new File("aggregationDatabase.txt");
+    }
+
+    public void insertIntoFile(BufferedReader read) { // Inserts data into databaseAggregation.txt file
+        // Inserts a json array into a aggregation database text file
+
+    }
+
+    public void removeFromDatabase(Integer ID_to_remove) {
+
     }
 
 }
