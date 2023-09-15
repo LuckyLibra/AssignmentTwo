@@ -58,6 +58,13 @@ public class ContentServer {
                             json_contents);
 
             System.out.println("Message sent! ");
+
+            //TODO
+            //Needs to keep track of all contentServers, and delete the data of those that are inactive
+
+
+            
+
             socket.close(); // Close socket
         } catch (IOException e) {
             e.printStackTrace();
