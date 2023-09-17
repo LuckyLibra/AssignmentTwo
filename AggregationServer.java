@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.*;
+import java.util.regex.*;
 
 public class AggregationServer {
     public static void main(String[] args) {
@@ -57,12 +58,12 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
             }
 
             String total_message = request_from_file.toString(); // complete message as string
-            System.out.println("Received message " + total_message); // debug
+            // System.out.println("Received message " + total_message); // debug
 
             if (total_message.contains("PUT")) { // Call put function for put request from contentserver
-                putResponse(write, read_file);
+                putResponse(write, request_from_file);
             } else if (total_message.contains("GET")) { // call get for request from client
-                getResponse(write, read_file);
+                getResponse(write, request_from_file);
             } else {
                 // ERROR! RETURN 400 RESPONSE CODE
             }
@@ -73,7 +74,7 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
         }
     }
 
-    public void putResponse(PrintWriter write, BufferedReader read) { // takes read and write
+    public void putResponse(PrintWriter write, StringBuilder read) { // takes read and write
         // Check if there is an Aggregation Database if not create the file
         File database = new File("aggregationDatabase.txt");
 
@@ -81,14 +82,9 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
             if (database.length() == 0) { // If file exists but has no content
                 insertIntoFile(read); // Insert json data into file
 
-                String success_message = "{'success':'true'}";
                 // First time weather data is received you should return status 201 -
                 // HTTP_CRATED
-                write.println(
-                        "HTTP/1.1 201 OK \r\n" +
-                                "Content.Length: " + success_message.length() + "\r\n" +
-                                "Content-Type: application/json \r\n " +
-                                success_message); // Sends 201 OK Response to content server
+                write.println( "HTTP/1.1 201 OK "); // Sends 201 OK Response to content server
             }
 
             else if (database.length() > 0) { // Database already has data, so we have to search for ID to determine
@@ -128,12 +124,12 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
 
     }
 
-    public void getResponse(PrintWriter write, BufferedReader read) {
+    public void getResponse(PrintWriter write, StringBuilder read) {
         // do stuff
     }
 
-    public boolean checkAlive(PrintWriter write, BufferedReader read) { // sends a get request that checks if the server
-                                                                        // is alive
+    public boolean checkAlive(PrintWriter write, StringBuilder read) { // sends a get request that checks if the server
+                                                                        // is alive after waiting a maximum of five seconds
         // sends a get request to the content server adn the content server can return a
         // body containing the message "I am alive"
 
@@ -144,8 +140,17 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
         File new_database = new File("aggregationDatabase.txt");
     }
 
-    public void insertIntoFile(BufferedReader read) { // Inserts data into databaseAggregation.txt file
+    public void insertIntoFile(StringBuilder read) { // Inserts data into databaseAggregation.txt file
         // Inserts a json array into a aggregation database text file
+        System.out.println(read);
+        Pattern regex = Pattern.compile("\\{[^{}]*\\}"); //regex for locating json
+        Matcher json_obj = regex.matcher(read);
+
+        if (!json_obj.find()) { //Error detected! no relevant content! 400 error
+            return; 
+        }
+
+        
 
     }
 

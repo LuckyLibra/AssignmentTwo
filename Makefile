@@ -1,4 +1,5 @@
 JAVAC=javac
+JAVAFLAGS = -source 8 -target 8
 sources = $(wildcard *.java)
 classes = $(sources:.java=.class)
 
@@ -11,6 +12,6 @@ out: output
 clean: rm -f *.class
 
 %.class: %.java
-	$(JAVAC) $<
+	$(JAVAC) $(JAVAFLAGS) $<
 
 .PHONY: all program clean jar
