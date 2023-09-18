@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 
@@ -21,15 +22,15 @@ public class ContentServer {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String new_line;
             file_content.append("{");
-            file_content.append("\n");
+            file_content.append("\r\n");
 
             while ((new_line = reader.readLine()) != null) { // while file not empty add content
                 file_content.append(" " + new_line);
-                file_content.append("\n");
+                file_content.append("\r\n");
             }
 
             file_content.append("}");
-            file_content.append("\n");
+            file_content.append("\r\n");
         } catch (IOException e){
             e.printStackTrace();
         }
@@ -39,7 +40,6 @@ public class ContentServer {
     private static void sendRequest(String file, String server, int clock) {
         // Call readFile(file) here to get data
         String json_contents = readFile(file);
-        System.out.print(json_contents);
 
         try {
             String host_name = server.split(":")[0];
@@ -59,16 +59,17 @@ public class ContentServer {
 
             System.out.println("Message sent! ");
 
-            //TODO
-            //Needs to keep track of all contentServers, and delete the data of those that are inactive
-
-
-            
+            //Socket needs to remain open for check alive request
+            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            String responseLine;
+            while (
+                (responseLine = input.readLine()) != null) {
+                    System.out.println(responseLine);
+                }
 
             socket.close(); // Close socket
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        } 
     }
-
 }

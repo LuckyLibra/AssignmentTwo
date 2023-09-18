@@ -42,8 +42,6 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
     // function call to handle get requests
     public HandleRequest(Socket client_socket) {
         this.client_socket = client_socket; // socket connection
-        counter++;
-        this.threadID = counter; // counter is incremented which represents new host found
     }
 
     public void run() {
@@ -54,18 +52,17 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
 
             String incoming_message; // read
             while ((incoming_message = read_file.readLine()) != null) { // While file is not empty, append to string
-                request_from_file.append(incoming_message);
+                request_from_file.append(incoming_message + "\r\n");
             }
 
             String total_message = request_from_file.toString(); // complete message as string
-            // System.out.println("Received message " + total_message); // debug
 
             if (total_message.contains("PUT")) { // Call put function for put request from contentserver
                 putResponse(write, request_from_file);
             } else if (total_message.contains("GET")) { // call get for request from client
                 getResponse(write, request_from_file);
             } else {
-                // ERROR! RETURN 400 RESPONSE CODE
+                write.println("HTTP/1.1 400"); // ERROR
             }
 
             client_socket.close(); // finally close thread!
@@ -80,22 +77,26 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
 
         if (database.exists()) { // first check if file exists
             if (database.length() == 0) { // If file exists but has no content
-                insertIntoFile(read); // Insert json data into file
+                boolean result = insertIntoFile(read); // Insert json data into file
 
-                // First time weather data is received you should return status 201 -
-                // HTTP_CRATED
-                write.println( "HTTP/1.1 201 OK "); // Sends 201 OK Response to content server
+                if (result == true) {
+                    write.println("HTTP/1.1 201 OK "); // Sends 201 OK Response to content server
+                } else {
+                    write.println("HTTP/1.1 204 No Content");
+                }
             }
 
             else if (database.length() > 0) { // Database already has data, so we have to search for ID to determine
                                               // overwrite
                 try {
+                    String request_id = findRequestID(read);
                     BufferedReader read_database = new BufferedReader(new FileReader(database)); // Read database
                     String line_from_database;
                     boolean host_id_exists = false;
 
                     while ((line_from_database = read_database.readLine()) != null) {
-                        if (line_from_database.contains("host_id: " + this.threadID)) { // Old data to overwrite located
+                        // data id from file
+                        if (line_from_database.contains("id:" + request_id)) { // Old data to overwrite located
                             host_id_exists = true;
                             break;
                         }
@@ -117,11 +118,6 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
             createFile();
             insertIntoFile(read);
         }
-
-        // If second update, 200 response code
-
-        // If Put request but not content, 204 status code
-
     }
 
     public void getResponse(PrintWriter write, StringBuilder read) {
@@ -129,7 +125,8 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
     }
 
     public boolean checkAlive(PrintWriter write, StringBuilder read) { // sends a get request that checks if the server
-                                                                        // is alive after waiting a maximum of five seconds
+                                                                       // is alive after waiting a maximum of five
+                                                                       // seconds
         // sends a get request to the content server adn the content server can return a
         // body containing the message "I am alive"
 
@@ -138,24 +135,43 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
 
     public void createFile() { // creates databaseAggregation.txt file
         File new_database = new File("aggregationDatabase.txt");
+
+        try {
+            new_database.createNewFile(); // Create new file
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void insertIntoFile(StringBuilder read) { // Inserts data into databaseAggregation.txt file
+    public boolean insertIntoFile(StringBuilder read) { // Inserts data into databaseAggregation.txt file
         // Inserts a json array into a aggregation database text file
-        System.out.println(read);
-        Pattern regex = Pattern.compile("\\{[^{}]*\\}"); //regex for locating json
+        Pattern regex = Pattern.compile("\\{[^{}]*\\}"); // regex for locating json
         Matcher json_obj = regex.matcher(read);
 
-        if (!json_obj.find()) { //Error detected! no relevant content! 400 error
-            return; 
+        if (!json_obj.find()) { // Error detected! no relevant content! 400 error
+            return false; // if unsuccessful return false
         }
 
-        
+        try { // write to the aggregationDatabase file
+            BufferedWriter write_to_file = new BufferedWriter(new FileWriter("aggregationDatabase.txt"));
+            write_to_file.write(json_obj.group());
+            write_to_file.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
+        return true; // if successful insert return true
     }
 
     public void removeFromDatabase(Integer ID_to_remove) {
 
+    }
+
+    public String findRequestID(StringBuilder read) { // This function locates the ID value of a json object which has
+                                                      // been converted to a string
+        Pattern regex = Pattern.compile("id:" + "([^\\n]+)");
+        Matcher id_value = regex.matcher(read);
+        return id_value.group(1).trim();
     }
 
 }
