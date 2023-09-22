@@ -9,7 +9,8 @@ program: $(classes)
 
 out: output
 
-clean: rm -f *.class
+clean: 
+	del *.class
 
 %.class: %.java
 	$(JAVAC) $(JAVAFLAGS) $<

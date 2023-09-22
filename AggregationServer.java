@@ -33,11 +33,9 @@ public class AggregationServer {
     }
 }
 
-class HandleRequest implements Runnable { // Runnable allows thread execution
+class HandleRequest extends Thread{ // Runnable allows thread execution
     // socket here as a variable in the class
     private Socket client_socket; // socket
-    private int threadID; // thread for each connect made, this way hosts are tracked
-    private static int counter = 1; // counter which is increased per thread
 
     // function call to handle get requests
     public HandleRequest(Socket client_socket) {
@@ -45,13 +43,15 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
     }
 
     public void run() {
-        try {
-            StringBuilder request_from_file = new StringBuilder();
+        try (
             BufferedReader read_file = new BufferedReader(new InputStreamReader(client_socket.getInputStream()));
             PrintWriter write = new PrintWriter(client_socket.getOutputStream(), true); // get output
+        ) {
+            StringBuilder request_from_file = new StringBuilder();
 
             String incoming_message; // read
-            while ((incoming_message = read_file.readLine()) != null) { // While file is not empty, append to string
+
+            while (!(incoming_message = read_file.readLine()).isEmpty() ) {
                 request_from_file.append(incoming_message + "\r\n");
             }
 
@@ -64,8 +64,6 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
             } else {
                 write.println("HTTP/1.1 400"); // ERROR
             }
-
-            client_socket.close(); // finally close thread!
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -75,53 +73,90 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
         // Check if there is an Aggregation Database if not create the file
         File database = new File("aggregationDatabase.txt");
 
-        if (database.exists()) { // first check if file exists
-            if (database.length() == 0) { // If file exists but has no content
-                boolean result = insertIntoFile(read); // Insert json data into file
+        try {
 
-                if (result == true) {
-                    write.println("HTTP/1.1 201 OK "); // Sends 201 OK Response to content server
-                } else {
-                    write.println("HTTP/1.1 204 No Content");
-                }
-            }
+            if (database.exists()) { // first check if file exists
+                if (database.length() == 0) { // If file exists but has no content
+                    boolean result = insertIntoFile(read); // Insert json data into file
 
-            else if (database.length() > 0) { // Database already has data, so we have to search for ID to determine
-                                              // overwrite
-                try {
-                    String request_id = findRequestID(read);
-                    BufferedReader read_database = new BufferedReader(new FileReader(database)); // Read database
-                    String line_from_database;
-                    boolean host_id_exists = false;
-
-                    while ((line_from_database = read_database.readLine()) != null) {
-                        // data id from file
-                        if (line_from_database.contains("id:" + request_id)) { // Old data to overwrite located
-                            host_id_exists = true;
-                            break;
-                        }
-                    }
-
-                    if (host_id_exists == true) {
-                        removeFromDatabase(this.threadID); // ID to remove from database
-                        insertIntoFile(read); // After 'old' data is removed, add new update
+                    if (result == true) {
+                        write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
+                        this.client_socket.close(); // close socket after sending response
                     } else {
-                        insertIntoFile(read); // If ID not present, add to database
+                        write.println("HTTP/1.1 204 No Content");
+                        this.client_socket.close(); // close socket after sending response
                     }
-
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
+
+                else if (database.length() > 0) { // Database already has data, so we have to search for ID to determine
+                                                  // overwrite
+                    try {
+                        String request_id = findRequestID(read);
+                        BufferedReader read_database = new BufferedReader(new FileReader(database)); // Read database
+                        String line_from_database;
+                        boolean host_id_exists = false;
+
+                        while ((line_from_database = read_database.readLine()) != null) {
+                            // data id from file
+                            if (line_from_database.contains("id:" + request_id)) { // Old data to overwrite located
+                                host_id_exists = true;
+                                break;
+                            }
+                        }
+
+                        if (host_id_exists == true) {
+                            removeFromDatabase(request_id); // ID to remove from database
+                            insertIntoFile(read); // After 'old' data is removed, add new update
+                            write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
+                            this.client_socket.close(); // close socket after sending response
+                        } else {
+                            insertIntoFile(read); // If ID not present, add to database
+                            write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
+                            this.client_socket.close(); // close socket after sending response
+                        }
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } else {
+                System.out.println("Aggregation Database does not exist. Creating database.");
+                createFile();
+                insertIntoFile(read);
+                write.println("HTTP/1.1 201 OK "); // Sends 201 OK Response to content server
+                this.client_socket.close(); // close socket after sending response
             }
-        } else {
-            System.out.println("Aggregation Database does not exist. Creating database.");
-            createFile();
-            insertIntoFile(read);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     public void getResponse(PrintWriter write, StringBuilder read) {
-        // do stuff
+        String database;
+        if (read.toString().contains("/weather.json/")) { // Second slash signals a station ID is requested
+            String words = (read.toString().split(" "))[1];
+            Pattern regex = Pattern.compile("/weather\\.json/(ID\\d+)");
+            Matcher id_found = regex.matcher(words); // The regex here it used to find the ID of the weather station
+
+            System.out.println("GET Request received for weather station: " + id_found.group(1));
+            database = retrieveDatabase(id_found.group(1));
+
+        } else if (read.toString().contains("/weather.json")) { // No slash signal no station ID, therefore return all
+            System.out.println("GET Request received for weather station.");
+            database = retrieveDatabase(null); // Take null ID as argument
+
+        } else {
+            write.println("Error 400 Bad Request");
+            return;
+        }
+
+        write.println(database);
+        try {
+            this.client_socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     public boolean checkAlive(PrintWriter write, StringBuilder read) { // sends a get request that checks if the server
@@ -163,7 +198,7 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
         return true; // if successful insert return true
     }
 
-    public void removeFromDatabase(Integer ID_to_remove) {
+    public void removeFromDatabase(String ID_to_remove) {
 
     }
 
@@ -172,6 +207,50 @@ class HandleRequest implements Runnable { // Runnable allows thread execution
         Pattern regex = Pattern.compile("id:" + "([^\\n]+)");
         Matcher id_value = regex.matcher(read);
         return id_value.group(1).trim();
+    }
+
+    // This function takes a string
+    public String retrieveDatabase(String id) {
+        if (id == null) { // retrieve entire database
+            StringBuilder file_content = new StringBuilder();
+
+            try (BufferedReader reader = new BufferedReader(new FileReader("aggregationDatabase.txt"))) {
+                String new_line;
+                while ((new_line = reader.readLine()) != null) { // while file not empty add content
+                    file_content.append(new_line + "\r\n");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return file_content.toString(); // Return file content as string
+
+        } else { // if there is a selected station
+            try {
+                StringBuilder selected_data = new StringBuilder(); // The data requested specifically which matches the
+                                                                   // ID of the station
+                BufferedReader reader = new BufferedReader(new FileReader("aggregationDatabase.txt"));
+                String line;
+                Boolean valid_data = false;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("{")) { // if ID is detected
+                        valid_data = true; // mark to append data
+                    } else if (line.contains("}")) {
+                        valid_data = false;
+                        if (selected_data.toString().contains("id:" + id)) {
+                            return selected_data.toString(); // if id is detected within data, return this data
+                        }
+                        selected_data.setLength(0); // Otherwise if string is not detected, reset stringbuilder
+                    } else if (valid_data == true) {
+                        selected_data.append(line + "\r\n"); // otherwise, continue appending data until encounters next
+                                                             // bracket
+                    }
+                }
+                reader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null; // No data found
     }
 
 }

@@ -1,4 +1,6 @@
 # AssignmentTwo
+The automated testing folder contains a README file which describes each of the automated test cases along with their .bat file. 
+To test the files manually: 
 
 To compile run "make" in the root folder
 

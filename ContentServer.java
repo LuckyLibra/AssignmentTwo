@@ -3,6 +3,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 public class ContentServer {
@@ -31,7 +32,7 @@ public class ContentServer {
 
             file_content.append("}");
             file_content.append("\r\n");
-        } catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return file_content.toString(); // Return file content as string
@@ -41,35 +42,31 @@ public class ContentServer {
         // Call readFile(file) here to get data
         String json_contents = readFile(file);
 
-        try {
+        try (Socket socket = new Socket()) {
+
             String host_name = server.split(":")[0];
             int port_num = Integer.parseInt(server.split(":")[1]);
-            Socket socket = new Socket(host_name, port_num); // Replace this with input from args
+            socket.connect(new InetSocketAddress(host_name, port_num));// Replace this with input from args
 
             System.out.println("Socket is running, seeking to connect to " + host_name + " " + port_num);
 
             // send data here
             PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
-            output.println(
-                            "PUT /weather.json HTTP/1.1 \r\n" +
-                            "User-Agent: ATOMClient/1/0 \r\n" +
-                            "Content-Type: application/json \r\n" +
-                            "Content-Length: " + json_contents.length() + "\r\n " +
-                            json_contents);
+            output.println( "PUT /weather.json HTTP/1.1\r\n" + "User-Agent: ATOMClient/1/0\r\n" + "Content-Type: application/json\r\n" +
+                            "Content-Length: " + json_contents.length() + "\r\n " + json_contents);
 
             System.out.println("Message sent! ");
 
-            //Socket needs to remain open for check alive request
             BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             String responseLine;
-            while (
-                (responseLine = input.readLine()) != null) {
-                    System.out.println(responseLine);
-                }
+            while ((responseLine = input.readLine()) != null) {
+                System.out.println(responseLine + "\r\n");
+            }
 
-            socket.close(); // Close socket
+            socket.close();
         } catch (IOException e) {
             e.printStackTrace();
-        } 
+        }
+        System.exit(0);
     }
 }
