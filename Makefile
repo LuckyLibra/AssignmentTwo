@@ -12,6 +12,10 @@ out: output
 clean: 
 	del *.class
 
+extra_clean:
+	del *.class
+	del aggregationDatabase.txt
+
 %.class: %.java
 	$(JAVAC) $(JAVAFLAGS) $<
 

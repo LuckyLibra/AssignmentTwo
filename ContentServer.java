@@ -41,29 +41,36 @@ public class ContentServer {
     private static void sendRequest(String file, String server, int clock) {
         // Call readFile(file) here to get data
         String json_contents = readFile(file);
+        String host_name = server.split(":")[0];
+        int port_num = Integer.parseInt(server.split(":")[1]);
 
-        try (Socket socket = new Socket()) {
 
-            String host_name = server.split(":")[0];
-            int port_num = Integer.parseInt(server.split(":")[1]);
-            socket.connect(new InetSocketAddress(host_name, port_num));// Replace this with input from args
-
-            System.out.println("Socket is running, seeking to connect to " + host_name + " " + port_num);
-
-            // send data here
+        try (
+            Socket socket = new Socket(host_name, port_num);
             PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
-            output.println( "PUT /weather.json HTTP/1.1\r\n" + "User-Agent: ATOMClient/1/0\r\n" + "Content-Type: application/json\r\n" +
-                            "Content-Length: " + json_contents.length() + "\r\n " + json_contents);
+            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        ) 
+        {
+            System.out.println("Socket is running, seeking to connect to " + host_name + " " + port_num);
+            
+            // send data here
+            output.println("PUT /weather.json HTTP/1.1\r\n" + "User-Agent: ATOMClient/1/0\r\n"
+                    + "Content-Type: application/json\r\n" +
+                    "Content-Length: " + json_contents.length() + "\r\n " + json_contents);
 
             System.out.println("Message sent! ");
 
-            BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             String responseLine;
             while ((responseLine = input.readLine()) != null) {
                 System.out.println(responseLine + "\r\n");
             }
 
-            socket.close();
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }

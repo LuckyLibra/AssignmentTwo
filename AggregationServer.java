@@ -33,7 +33,7 @@ public class AggregationServer {
     }
 }
 
-class HandleRequest extends Thread{ // Runnable allows thread execution
+class HandleRequest extends Thread { // Runnable allows thread execution
     // socket here as a variable in the class
     private Socket client_socket; // socket
 
@@ -44,14 +44,14 @@ class HandleRequest extends Thread{ // Runnable allows thread execution
 
     public void run() {
         try (
-            BufferedReader read_file = new BufferedReader(new InputStreamReader(client_socket.getInputStream()));
-            PrintWriter write = new PrintWriter(client_socket.getOutputStream(), true); // get output
+                BufferedReader read_file = new BufferedReader(new InputStreamReader(client_socket.getInputStream()));
+                PrintWriter write = new PrintWriter(client_socket.getOutputStream(), true); // get output
         ) {
             StringBuilder request_from_file = new StringBuilder();
 
             String incoming_message; // read
 
-            while (!(incoming_message = read_file.readLine()).isEmpty() ) {
+            while (!(incoming_message = read_file.readLine()).isEmpty()) {
                 request_from_file.append(incoming_message + "\r\n");
             }
 
@@ -122,8 +122,12 @@ class HandleRequest extends Thread{ // Runnable allows thread execution
             } else {
                 System.out.println("Aggregation Database does not exist. Creating database.");
                 createFile();
-                insertIntoFile(read);
-                write.println("HTTP/1.1 201 OK "); // Sends 201 OK Response to content server
+                boolean check = insertIntoFile(read);
+                if (check) {
+                    write.println("HTTP/1.1 201 OK "); // Sends 201 OK Response to content server
+                } else {
+                    write.println("HTTP/1.1 204 No Content");
+                }
                 this.client_socket.close(); // close socket after sending response
             }
         } catch (IOException e) {
@@ -134,12 +138,16 @@ class HandleRequest extends Thread{ // Runnable allows thread execution
     public void getResponse(PrintWriter write, StringBuilder read) {
         String database;
         if (read.toString().contains("/weather.json/")) { // Second slash signals a station ID is requested
-            String words = (read.toString().split(" "))[1];
-            Pattern regex = Pattern.compile("/weather\\.json/(ID\\d+)");
-            Matcher id_found = regex.matcher(words); // The regex here it used to find the ID of the weather station
+            String[] words = ((read.toString().split(" "))[1]).split("/");
+            String id_found = words[2];
 
-            System.out.println("GET Request received for weather station: " + id_found.group(1));
-            database = retrieveDatabase(id_found.group(1));
+            if (id_found.length() > 0) {
+                System.out.println("GET Request received for weather station: " + id_found);
+                database = retrieveDatabase(id_found);
+            } else {
+                write.println("Error 400");
+                return;
+            }
 
         } else if (read.toString().contains("/weather.json")) { // No slash signal no station ID, therefore return all
             System.out.println("GET Request received for weather station.");
@@ -150,6 +158,7 @@ class HandleRequest extends Thread{ // Runnable allows thread execution
             return;
         }
 
+        System.out.println("Sending response to GET request");
         write.println(database);
         try {
             this.client_socket.close();
@@ -183,13 +192,14 @@ class HandleRequest extends Thread{ // Runnable allows thread execution
         Pattern regex = Pattern.compile("\\{[^{}]*\\}"); // regex for locating json
         Matcher json_obj = regex.matcher(read);
 
-        if (!json_obj.find()) { // Error detected! no relevant content! 400 error
-            return false; // if unsuccessful return false
-        }
-
         try { // write to the aggregationDatabase file
-            BufferedWriter write_to_file = new BufferedWriter(new FileWriter("aggregationDatabase.txt"));
+            if (!json_obj.find() || json_obj.group().length() <= 4) { // Error detected! no relevant content! 400 error
+                return false; // if unsuccessful return false
+            }
+
+            BufferedWriter write_to_file = new BufferedWriter(new FileWriter("aggregationDatabase.txt", true));
             write_to_file.write(json_obj.group());
+            write_to_file.newLine();
             write_to_file.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -206,7 +216,11 @@ class HandleRequest extends Thread{ // Runnable allows thread execution
                                                       // been converted to a string
         Pattern regex = Pattern.compile("id:" + "([^\\n]+)");
         Matcher id_value = regex.matcher(read);
-        return id_value.group(1).trim();
+
+        if (id_value.find()) {
+            return id_value.group(1).trim();
+        }
+        return "";
     }
 
     // This function takes a string
