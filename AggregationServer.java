@@ -106,7 +106,6 @@ class HandleRequest extends Thread { // Runnable allows thread execution
 
                         if (host_id_exists == true) {
                             removeFromDatabase(request_id); // ID to remove from database
-                            insertIntoFile(read); // After 'old' data is removed, add new update
                             write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
                             this.client_socket.close(); // close socket after sending response
                         } else {
@@ -208,10 +207,6 @@ class HandleRequest extends Thread { // Runnable allows thread execution
         return true; // if successful insert return true
     }
 
-    public void removeFromDatabase(String ID_to_remove) {
-
-    }
-
     public String findRequestID(StringBuilder read) { // This function locates the ID value of a json object which has
                                                       // been converted to a string
         Pattern regex = Pattern.compile("id:" + "([^\\n]+)");
@@ -221,6 +216,34 @@ class HandleRequest extends Thread { // Runnable allows thread execution
             return id_value.group(1).trim();
         }
         return "";
+    }
+
+    //Used to remove data from the database based on the string provided, this can be used when removing data with duplicate id's, as well as removing data from a weather station
+    // where the connection has been lost
+    public void removeFromDatabase(String ID_to_remove) {
+        try {
+            StringBuilder selected_data = new StringBuilder();
+            BufferedReader reader = new BufferedReader(new FileReader("aggregationDatabase.txt"));
+            String line;
+            boolean valid_data = false;
+            while ((line = reader.readLine()) != null) {  //Essentially follows the same formaula as the retrieve database logic, where it searches for the presence of id within the brackets then determines if valid or not
+                if (line.contains("{")) {
+                    valid_data = true;
+                    selected_data.append(line).append("\n"); // Include the opening bracket in the result
+                } else if (line.contains("}")) {
+                    valid_data = false;
+                    if (!selected_data.toString().contains("id:" + ID_to_remove)) {
+                        selected_data.append(line).append("\n"); // Include the closing bracket in the result
+                    }
+                } else if (valid_data) {
+                    selected_data.append(line).append("\n");
+                }
+            }
+            reader.close();
+            insertIntoFile(selected_data);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     // This function takes a string

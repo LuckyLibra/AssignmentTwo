@@ -32,7 +32,7 @@ A content server sends a PUT request with no contnet.
 The aggregation server sends a 204 Status code (No content)
 ------------------------------------------------
 
--------TEST SIX : AGGREGATION SERVER CRASH ---------
+-------TEST SIX : AGGREGATION SERVER CRASH --------- (PASSED)
 A content server sends a PUT request to the aggregation server.
 The aggregation server creates a database and stores the information there and sends a 201 OK.
 The aggregation server crashes.
@@ -41,7 +41,7 @@ A client server makes a GET request to the aggregation server.
 The aggregation server retrieves data from a text file and sends it to the client.
 ---------------------------------------------------------------------------------
 
------- TEST SEVEN : DELETE OLD DATA ------
+------ TEST SEVEN : DELETE OLD DATA ------ 
 A content server sends a PUT request to the aggregation server.
 The aggregation server stores the data to the database.
 After 30 seconds, the aggregation server sends a GET request to the content server to check if they are alive. 
