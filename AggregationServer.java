@@ -6,6 +6,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.*;
 import java.util.regex.*;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class AggregationServer {
     public static void main(String[] args) {
@@ -25,6 +27,7 @@ public class AggregationServer {
                 HandleRequest handleRequest = new HandleRequest(client_socket); // Use class to create a new thread so
                                                                                 // threads can be handled seperately
                 Thread thread = new Thread(handleRequest);
+                lamport_clock++;
                 thread.start();
             }
         } catch (IOException e) {
@@ -58,82 +61,84 @@ class HandleRequest extends Thread { // Runnable allows thread execution
             String total_message = request_from_file.toString(); // complete message as string
 
             if (total_message.contains("PUT")) { // Call put function for put request from contentserver
+                System.out.println("PUT request received");
                 putResponse(write, request_from_file);
             } else if (total_message.contains("GET")) { // call get for request from client
                 getResponse(write, request_from_file);
             } else {
                 write.println("HTTP/1.1 400"); // ERROR
             }
+
+            Thread.sleep(30000); // Sleep for 30 seconds
+            Boolean check_alive = checkAlive(write, read_file); // check if content server is still alive
+            if (check_alive == false) { // the content server has not responded
+                String request_id = findRequestID(request_from_file);
+                removeFromDatabase(request_id);
+            }
+
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
+    // Determines what must occur after a put response has been called
     public void putResponse(PrintWriter write, StringBuilder read) { // takes read and write
         // Check if there is an Aggregation Database if not create the file
         File database = new File("aggregationDatabase.txt");
 
-        try {
+        if (database.exists()) { // first check if file exists
+            if (database.length() == 0) { // If file exists but has no content
+                boolean result = insertIntoFile(read); // Insert json data into file
 
-            if (database.exists()) { // first check if file exists
-                if (database.length() == 0) { // If file exists but has no content
-                    boolean result = insertIntoFile(read); // Insert json data into file
-
-                    if (result == true) {
-                        write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
-                        this.client_socket.close(); // close socket after sending response
-                    } else {
-                        write.println("HTTP/1.1 204 No Content");
-                        this.client_socket.close(); // close socket after sending response
-                    }
-                }
-
-                else if (database.length() > 0) { // Database already has data, so we have to search for ID to determine
-                                                  // overwrite
-                    try {
-                        String request_id = findRequestID(read);
-                        BufferedReader read_database = new BufferedReader(new FileReader(database)); // Read database
-                        String line_from_database;
-                        boolean host_id_exists = false;
-
-                        while ((line_from_database = read_database.readLine()) != null) {
-                            // data id from file
-                            if (line_from_database.contains("id:" + request_id)) { // Old data to overwrite located
-                                host_id_exists = true;
-                                break;
-                            }
-                        }
-
-                        if (host_id_exists == true) {
-                            removeFromDatabase(request_id); // ID to remove from database
-                            write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
-                            this.client_socket.close(); // close socket after sending response
-                        } else {
-                            insertIntoFile(read); // If ID not present, add to database
-                            write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
-                            this.client_socket.close(); // close socket after sending response
-                        }
-
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            } else {
-                System.out.println("Aggregation Database does not exist. Creating database.");
-                createFile();
-                boolean check = insertIntoFile(read);
-                if (check) {
-                    write.println("HTTP/1.1 201 OK "); // Sends 201 OK Response to content server
+                if (result == true) {
+                    write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
                 } else {
                     write.println("HTTP/1.1 204 No Content");
                 }
-                this.client_socket.close(); // close socket after sending response
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+
+            else if (database.length() > 0) { // Database already has data, so we have to search for ID to determine
+                                              // overwrite
+                try {
+                    String request_id = findRequestID(read);
+                    BufferedReader read_database = new BufferedReader(new FileReader(database)); // Read database
+                    String line_from_database;
+                    boolean host_id_exists = false;
+
+                    while ((line_from_database = read_database.readLine()) != null) {
+                        // data id from file
+                        if (line_from_database.contains("id:" + request_id)) { // Old data to overwrite located
+                            host_id_exists = true;
+                            break;
+                        }
+                    }
+                    if (host_id_exists == true) {
+                        removeFromDatabase(request_id); // ID to remove from database
+                        write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
+                    } else {
+                        insertIntoFile(read); // If ID not present, add to database
+                        write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
+                    }
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            System.out.println("Aggregation Database does not exist. Creating database.");
+            createFile();
+            boolean check = insertIntoFile(read);
+            if (check) {
+                write.println("HTTP/1.1 201 OK "); // Sends 201 OK Response to content server
+            } else {
+                write.println("HTTP/1.1 204 No Content");
+            }
         }
     }
 
+    // Determines the output that should follow after a get response has been sent
     public void getResponse(PrintWriter write, StringBuilder read) {
         String database;
         if (read.toString().contains("/weather.json/")) { // Second slash signals a station ID is requested
@@ -158,7 +163,12 @@ class HandleRequest extends Thread { // Runnable allows thread execution
         }
 
         System.out.println("Sending response to GET request");
-        write.println(database);
+        if (database.length() > 0) {
+            write.println(database);
+        } else {
+            write.println("The database currently has no data available.");
+        }
+
         try {
             this.client_socket.close();
         } catch (IOException e) {
@@ -167,16 +177,40 @@ class HandleRequest extends Thread { // Runnable allows thread execution
 
     }
 
-    public boolean checkAlive(PrintWriter write, StringBuilder read) { // sends a get request that checks if the server
-                                                                       // is alive after waiting a maximum of five
-                                                                       // seconds
-        // sends a get request to the content server adn the content server can return a
-        // body containing the message "I am alive"
+    // sends a get request that checks if the server after waiting 30 seconds
+    // sends a get request to the content server adn the content server can return a
+    // body containing the message "I am alive"
+    public boolean checkAlive(PrintWriter write, BufferedReader output) {
+        try {
+            System.out.println("Contacting content server to check if alive");
+            write.println("GET /alive HTTP/1.1 \r\n" + // Sends a message to the content server
+                    "User-Agent: ATOMClient/1/0 \r\n" +
+                    "Content-Type: application/json \r\n");
 
+            String incoming_message; // Read
+
+            Timer timer = new Timer(); // create a new timer to handle no message timeout
+            timer.schedule(new TimerTask() { // Create a timer task which will end after 5 seconds
+                public void run() {
+                    System.out.println(
+                            "Server has not responded to GET request. Closing connection and removing old data.");
+                    timer.cancel();
+                }
+            }, 5000); // if after 5 seconds there is no response. Call timer
+
+            while ((incoming_message = output.readLine()) != null) { // read outputs from content server
+                timer.cancel(); // if a message is receive cancel the timer
+                System.out.println(incoming_message);
+                return true; // return true if message received
+            }
+        } catch (IOException e) {
+            e.printStackTrace(write);
+        }
         return false;
     }
 
-    public void createFile() { // creates databaseAggregation.txt file
+    // creates databaseAggregation.txt file
+    public void createFile() {
         File new_database = new File("aggregationDatabase.txt");
 
         try {
@@ -186,7 +220,8 @@ class HandleRequest extends Thread { // Runnable allows thread execution
         }
     }
 
-    public boolean insertIntoFile(StringBuilder read) { // Inserts data into databaseAggregation.txt file
+    // Inserts data into databaseAggregation.txt file
+    public boolean insertIntoFile(StringBuilder read) {
         // Inserts a json array into a aggregation database text file
         Pattern regex = Pattern.compile("\\{[^{}]*\\}"); // regex for locating json
         Matcher json_obj = regex.matcher(read);
@@ -207,8 +242,9 @@ class HandleRequest extends Thread { // Runnable allows thread execution
         return true; // if successful insert return true
     }
 
-    public String findRequestID(StringBuilder read) { // This function locates the ID value of a json object which has
-                                                      // been converted to a string
+    // This function locates the ID value of a json object which has been converted
+    // to a string
+    public String findRequestID(StringBuilder read) {
         Pattern regex = Pattern.compile("id:" + "([^\\n]+)");
         Matcher id_value = regex.matcher(read);
 
@@ -218,7 +254,9 @@ class HandleRequest extends Thread { // Runnable allows thread execution
         return "";
     }
 
-    //Used to remove data from the database based on the string provided, this can be used when removing data with duplicate id's, as well as removing data from a weather station
+    // Used to remove data from the database based on the string provided, this can
+    // be used when removing data with duplicate id's, as well as removing data from
+    // a weather station
     // where the connection has been lost
     public void removeFromDatabase(String ID_to_remove) {
         try {
@@ -226,7 +264,9 @@ class HandleRequest extends Thread { // Runnable allows thread execution
             BufferedReader reader = new BufferedReader(new FileReader("aggregationDatabase.txt"));
             String line;
             boolean valid_data = false;
-            while ((line = reader.readLine()) != null) {  //Essentially follows the same formaula as the retrieve database logic, where it searches for the presence of id within the brackets then determines if valid or not
+            while ((line = reader.readLine()) != null) { // Essentially follows the same formaula as the retrieve
+                                                         // database logic, where it searches for the presence of id
+                                                         // within the brackets then determines if valid or not
                 if (line.contains("{")) {
                     valid_data = true;
                     selected_data.append(line).append("\n"); // Include the opening bracket in the result
@@ -239,6 +279,14 @@ class HandleRequest extends Thread { // Runnable allows thread execution
                     selected_data.append(line).append("\n");
                 }
             }
+
+            if (selected_data.toString().contains("id:" + ID_to_remove)) {
+                BufferedWriter writer = new BufferedWriter(new FileWriter("aggregationDatabase.txt"));
+                writer.write(""); // Empty the file by writing and empty string
+                writer.close();
+
+            }
+
             reader.close();
             insertIntoFile(selected_data);
         } catch (IOException e) {
@@ -246,7 +294,10 @@ class HandleRequest extends Thread { // Runnable allows thread execution
         }
     }
 
-    // This function takes a string
+    // This function takes a string id input an uses it to retrieve database
+    // information for a get request
+    // If the input is 'null', it will retrieve all data, if it is not, it will only
+    // retrieve data for that ID
     public String retrieveDatabase(String id) {
         if (id == null) { // retrieve entire database
             StringBuilder file_content = new StringBuilder();

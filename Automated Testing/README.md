@@ -41,7 +41,7 @@ A client server makes a GET request to the aggregation server.
 The aggregation server retrieves data from a text file and sends it to the client.
 ---------------------------------------------------------------------------------
 
------- TEST SEVEN : DELETE OLD DATA ------ 
+------ TEST SEVEN : DELETE OLD DATA ------  (PASSED)
 A content server sends a PUT request to the aggregation server.
 The aggregation server stores the data to the database.
 After 30 seconds, the aggregation server sends a GET request to the content server to check if they are alive. 
@@ -52,9 +52,11 @@ The aggregation server sends the data to the client.
 The client views the data, the deleted data is not present.
 --------------------------------------------------------------------
 
--------TEST EIGHT : OVERWRITE DATA BASED ON ID-------------
+-------TEST EIGHT : OVERWRITE DATA BASED ON ID------------- (PASSED)
 A content server sends a PUT request to the aggregation server.
 The aggregation server stores the data to the database.
 The content server then sends updated weather information with the same ID.
 The aggregation server searches the database for this ID, then overwrites the old data with new data. 
 ----------------------------------------------------------------------------
+
+-------TEST NINE : LAMPORT CLOCKS -------------

@@ -12,21 +12,12 @@ cd ..
 make extra_clean
 make
 
-echo Starting AggregationServer...
 start java -cp . AggregationServer
 
-
-echo Starting ContentServer...
 start java -cp . ContentServer localhost:4567 Input_Files/AdelaideInput.txt
 
-
-echo Waiting for servers to start (adjust timeout as needed)...
 timeout /t 15
 
-echo Restarting AggregationServer...
 start java -cp . AggregationServer
 
-echo Starting GetClient...
 start java -cp . GetClient localhost:4567
-
-echo Script completed.

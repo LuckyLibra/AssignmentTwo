@@ -5,6 +5,9 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class ContentServer {
     public static void main(String[] args) {
@@ -51,6 +54,7 @@ public class ContentServer {
             BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         ) 
         {
+            socket.setSoTimeout(10000);
             System.out.println("Socket is running, seeking to connect to " + host_name + " " + port_num);
             
             // send data here
@@ -58,20 +62,19 @@ public class ContentServer {
                     + "Content-Type: application/json\r\n" +
                     "Content-Length: " + json_contents.length() + "\r\n " + json_contents);
 
-            System.out.println("Message sent! ");
+            System.out.println("PUT Request successfully sent \n ");
 
             String responseLine;
             while ((responseLine = input.readLine()) != null) {
                 System.out.println(responseLine + "\r\n");
+                if (responseLine.contains("alive")) { //this signals that a check is alive is required
+                    output.println("HTTP/1.1 200 OK"); //signals that server is alive
+                }
             }
-
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-        } catch (IOException e) {
+        } catch (SocketTimeoutException e){ //Closes socket automatically after 10 seconds of no contact
+            System.out.println("Socket did not receive any communications within 10 seconds. Closing.");
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
         System.exit(0);
