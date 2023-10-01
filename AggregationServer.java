@@ -116,6 +116,7 @@ class HandleRequest extends Thread { // Runnable allows thread execution
                     }
                     if (host_id_exists == true) {
                         removeFromDatabase(request_id); // ID to remove from database
+                        insertIntoFile(read);
                         write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
                     } else {
                         insertIntoFile(read); // If ID not present, add to database
@@ -260,6 +261,7 @@ class HandleRequest extends Thread { // Runnable allows thread execution
     // where the connection has been lost
     public void removeFromDatabase(String ID_to_remove) {
         try {
+            StringBuilder all_data = new StringBuilder();
             StringBuilder selected_data = new StringBuilder();
             BufferedReader reader = new BufferedReader(new FileReader("aggregationDatabase.txt"));
             String line;
@@ -274,6 +276,7 @@ class HandleRequest extends Thread { // Runnable allows thread execution
                     valid_data = false;
                     if (!selected_data.toString().contains("id:" + ID_to_remove)) {
                         selected_data.append(line).append("\n"); // Include the closing bracket in the result
+                        all_data.append(selected_data);
                     }
                 } else if (valid_data) {
                     selected_data.append(line).append("\n");
@@ -287,8 +290,8 @@ class HandleRequest extends Thread { // Runnable allows thread execution
 
             }
 
+            System.out.println(all_data);
             reader.close();
-            insertIntoFile(selected_data);
         } catch (IOException e) {
             e.printStackTrace();
         }

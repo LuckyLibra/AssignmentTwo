@@ -1,4 +1,5 @@
 @REM -----------TEST TWO: GET TEST ------------ (PASSED)
+@REM Designed to be made after test one
 @REM A GetClient sends a GET request.
 @REM The aggregation server retrieves the data and sends it to the requester.
 @REM -------------------------------------------------------------------

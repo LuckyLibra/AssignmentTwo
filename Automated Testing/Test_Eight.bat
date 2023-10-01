@@ -1,4 +1,4 @@
-@REM -------TEST EIGHT : OVERWRITE DATA BASED ON ID-------------
+@REM -------TEST EIGHT : OVERWRITE DATA BASED ON ID------------- (PASSED)
 @REM A content server sends a PUT request to the aggregation server.
 @REM The aggregation server stores the data to the database.
 @REM The content server then sends updated weather information with the same ID.
@@ -11,4 +11,6 @@ make
 start java -cp . AggregationServer
 start java -cp . ContentServer localhost:4567 Input_Files/AdelaideInput.txt
 start java -cp . ContentServer localhost:4567 Input_Files/AdelaideInputUpdated.txt
+
+timeout /t 5
 start java -cp . GetClient localhost:4567
