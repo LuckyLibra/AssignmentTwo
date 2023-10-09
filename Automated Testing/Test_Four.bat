@@ -1,4 +1,4 @@
-@REM -------------TEST FOUR: MULTI-PUT AND MULTI-GET REQUEST----------------- (PASSED)
+@REM -------------TEST FOUR: MULTI-PUT AND MULTI-GET REQUEST-----------------
 @REM A content server sends a PUT request.
 @REM Another content server sends a PUT request for a seperate ID.
 @REM The aggregation server creates the database and sends a 201 OK to the first server.

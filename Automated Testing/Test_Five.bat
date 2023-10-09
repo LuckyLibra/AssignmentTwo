@@ -1,4 +1,4 @@
-@REM --------TEST FIVE : 204 NO CONTENT------------- PASSED
+@REM --------TEST FIVE : 204 NO CONTENT------------- 
 @REM A content server sends a PUT request with no contnet.
 @REM The aggregation server sends a 204 Status code (No content)
 @REM ------------------------------------------------

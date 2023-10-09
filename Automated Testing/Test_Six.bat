@@ -16,7 +16,9 @@ start java -cp . AggregationServer
 
 start java -cp . ContentServer localhost:4567 Input_Files/AdelaideInput.txt
 
-timeout /t 15
+timeout /t 4
+
+taskkill /im java.exe /f /t
 
 start java -cp . AggregationServer
 

@@ -1,4 +1,4 @@
-@REM ---------TEST ONE: PUT TEST ------------- (PASSED)
+@REM ---------TEST ONE: PUT TEST ------------- 
 @REM A content server sends a PUT request.
 @REM The aggregation server creates the database and sends a 201 OK
 @REM -------------------------------------------

@@ -3,24 +3,24 @@ Additionally, the bat files are designed to clean and re-make the java files eac
 Here is a description of each test:
 
 
----------TEST ONE: PUT TEST ------------- (PASSED)
+---------TEST ONE: PUT TEST ------------- 
 A content server sends a PUT request.
 The aggregation server creates the database and sends a 201 OK
 -------------------------------------------
 
------------TEST TWO: GET TEST ------------ (PASSED)
+-----------TEST TWO: GET TEST ------------ 
 A GetClient sends a GET request.
 The aggregation server retrieves the data and sends it to the requester.
 -------------------------------------------------------------------
 
-------------TEST THREE: PUT AND GET TEST------------ (PASSED)
+------------TEST THREE: PUT AND GET TEST------------ 
 A content server sends a PUT request.
 The aggregation server creates the database and sends a 201 OK.
 A GetClient sends a GET Request.
 The aggregation server retrieves the data and sends it to the requester.
 ---------------------------------------------------------------------
 
--------------TEST FOUR: MULTI-PUT AND MULTI-GET REQUEST----------------- (PASSED)
+-------------TEST FOUR: MULTI-PUT AND MULTI-GET REQUEST----------------- 
 A content server sends a PUT request.
 Another content server sends a PUT request for a seperate ID.
 The aggregation server creates the database and sends a 201 OK to the first server.
@@ -31,12 +31,12 @@ The aggregation server sends the entire database information to the first client
 The aggregation server sends only the information for that ID to the user. 
 ------------------------------------------------------
 
---------TEST FIVE : 204 NO CONTENT------------- (PASSED)
+--------TEST FIVE : 204 NO CONTENT------------- 
 A content server sends a PUT request with no contnet.
 The aggregation server sends a 204 Status code (No content)
 ------------------------------------------------
 
--------TEST SIX : AGGREGATION SERVER CRASH --------- (PASSED)
+-------TEST SIX : AGGREGATION SERVER CRASH --------- 
 A content server sends a PUT request to the aggregation server.
 The aggregation server creates a database and stores the information there and sends a 201 OK.
 The aggregation server crashes.
@@ -45,7 +45,7 @@ A client server makes a GET request to the aggregation server.
 The aggregation server retrieves data from a text file and sends it to the client.
 ---------------------------------------------------------------------------------
 
------- TEST SEVEN : DELETE OLD DATA ------  (PASSED)
+------ TEST SEVEN : DELETE OLD DATA ------  
 A content server sends a PUT request to the aggregation server.
 The aggregation server stores the data to the database.
 After 30 seconds, the aggregation server sends a GET request to the content server to check if they are alive. 
@@ -56,7 +56,7 @@ The aggregation server sends the data to the client.
 The client views the data, the deleted data is not present.
 --------------------------------------------------------------------
 
--------TEST EIGHT : OVERWRITE DATA BASED ON ID------------- (PASSED)
+-------TEST EIGHT : OVERWRITE DATA BASED ON ID------------- 
 A content server sends a PUT request to the aggregation server.
 The aggregation server stores the data to the database.
 The content server then sends updated weather information with the same ID.
@@ -64,6 +64,7 @@ The aggregation server searches the database for this ID, then overwrites the ol
 ----------------------------------------------------------------------------
 
 -------TEST NINE : LAMPORT CLOCKS -------------
+(This explanation also has a diagram for a high-level visual understanding of what is occuring in this folder called 'Test_Nine-Visualised.png)
 A content server from Sydney sends a PUT Request. 
 A content server from Sydney sends a PUT Request with updated information that it is raining now.
 A client makes a GET request for data.

@@ -1,4 +1,4 @@
-@REM ------ TEST SEVEN : DELETE OLD DATA ------ (PASSED)
+@REM ------ TEST SEVEN : DELETE OLD DATA ------ 
 @REM A content server sends a PUT request to the aggregation server.
 @REM The aggregation server stores the data to the database.
 @REM After 30 seconds, the aggregation server sends a GET request to the content server to check if they are alive. 

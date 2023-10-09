@@ -1,4 +1,4 @@
-@REM ------------TEST THREE: PUT AND GET TEST------------ (PASSED)
+@REM ------------TEST THREE: PUT AND GET TEST-----------
 @REM A content server sends a PUT request.
 @REM The aggregation server creates the database and sends a 201 OK.
 @REM A GetClient sends a GET Request.
