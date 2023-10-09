@@ -1,4 +1,8 @@
-This folder contains several automated tests which can be run. Here is a description of each test:
+This folder contains several automated tests which can be run, each test is a .bat file (ex. Run with '.\Test_One.bat').
+Additionally, the bat files are designed to clean and re-make the java files each time they are run, so 'make' does not need to be manually run. 
+Here is a description of each test:
+
+
 ---------TEST ONE: PUT TEST ------------- (PASSED)
 A content server sends a PUT request.
 The aggregation server creates the database and sends a 201 OK
@@ -61,12 +65,13 @@ The aggregation server searches the database for this ID, then overwrites the ol
 
 -------TEST NINE : LAMPORT CLOCKS -------------
 A content server from Sydney sends a PUT Request. 
-A content server from Sydney sends a PUT Request with updated information.
-The first content server has a processing delay of 15 seconds. 
-The thread handling the second content server PUT request is delayed.
+A content server from Sydney sends a PUT Request with updated information that it is raining now.
+A client makes a GET request for data.
+The first content server has a processing delay of 7 seconds. 
+The thread handling the second content server PUT request is put on hold until the first task has finished.
+The thread handling the get request is put on hold until the first and second task are finished.
 The aggregation server finishes handling the thread of the first content server.
 The thread handling the second content server is no longer delayed, it completes.
-A client server makes it get request. 
-The aggregation server sends the data to the client.
-The client views the data, the data is from the second content server. 
---------------------------------------------------------------------------------
+The thread handling the get request completes and the aggregation server sends data to the client.
+The client views the data, the data is from the second content server with the update that it is raining now. 
+---------------------------------------------------------------------------

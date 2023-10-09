@@ -1,19 +1,15 @@
 public class LamportClock {
-    public int time;
+    private static int time = 0;
 
-    public LamportClock() { //lamport clock class which handles updates
-        this.time = 0; //initialise time as 0 to begin with 
-    }
-
-    public synchronized int getCurrentTime() { //synchronized to prevent race conditions
+    public static int getCurrentTime() { //synchronized to prevent race conditions
         return time;
     }
 
-    public synchronized void increaseTime () { //Increases the time by one, used in cases such as sending/receiving 
+    public static void increaseTime () { //Increases the time by one, used in cases such as sending/receiving 
         time++;
     }
 
-    public synchronized void updateTime(int receivedTime) {
+    public static void updateTime(int receivedTime) {
         time = Math.max(time, receivedTime) + 1;
     }
 

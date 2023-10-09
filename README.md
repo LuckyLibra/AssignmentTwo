@@ -1,5 +1,9 @@
 # AssignmentTwo
-The automated testing folder contains a README file which describes each of the automated test cases along with their .bat file. 
+The automated testing folder contains a README file which describes each of the automated test cases along with their .bat file,
+these automated test cases have been designed to show the various functionalities of the system and ensure they correctly operate.
+It is suggested to the view these first, then if additional or further testing is required:
+
+
 To test the files manually: 
 
 To compile run "make" in the root folder

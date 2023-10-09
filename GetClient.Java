@@ -31,6 +31,8 @@ public class GetClient {
         ) {
             System.out.println("Socket is running, seeking to connect to " + host_name + " " + port_num);
 
+            LamportClock.increaseTime();
+            
             if (station_id != null) { // if station ID was used as an argument
                 output.println("GET /weather.json/" + station_id + " HTTP/1.1\r\n" + "User-Agent: ATOMClient/1/0\r\n" +
                         "Content-Type: application/json\r\n");

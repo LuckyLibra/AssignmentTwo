@@ -14,9 +14,8 @@ public class ContentServer {
         String server_name = args[0]; // "http://servername.domain.domain:portnumber", "http://servername:portnumber",
                                       // "servername:portnumber"
         String file_location = args[1]; // file location
-        int lamport_clock = 0; // lamport clock initialised at 0 to begin
 
-        sendRequest(file_location, server_name, lamport_clock);
+        sendRequest(file_location, server_name);
     }
 
     // Takes file name as a parameter and returns the content of said file
@@ -41,7 +40,7 @@ public class ContentServer {
         return file_content.toString(); // Return file content as string
     }
 
-    private static void sendRequest(String file, String server, int clock) {
+    private static void sendRequest(String file, String server) {
         // Call readFile(file) here to get data
         String json_contents = readFile(file);
         String host_name = server.split(":")[0];
@@ -57,12 +56,13 @@ public class ContentServer {
             socket.setSoTimeout(10000);
             System.out.println("Socket is running, seeking to connect to " + host_name + " " + port_num);
             
-            clock++;
+            LamportClock.increaseTime();
+            
             // send data here
             output.println("PUT /weather.json HTTP/1.1\r\n" + "User-Agent: ATOMClient/1/0\r\n"
                     + "Content-Type: application/json\r\n" +
-                    "Lamport-Clock: " + clock + "\r\n" +
                     "Content-Length: " + json_contents.length() + "\r\n " + json_contents);
+            
 
             System.out.println("PUT Request successfully sent \n ");
 

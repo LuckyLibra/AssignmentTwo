@@ -14,14 +14,11 @@ public class AggregationServer {
 
     static {
         timers.add(0); // Initialize the list with an initial value of 0
-        timers.add(1);
     }
 
     public static final Object lock = new Object(); // prepare lock
-
     public static void main(String[] args) {
         int port = 4567; // default number
-        LamportClock lamport_clock = new LamportClock(); // initialise lamport clock here
 
         if (args.length > 0) { // If a port number was in the command line
             port = Integer.parseInt(args[0]); // Update port number to command line arg
@@ -33,7 +30,7 @@ public class AggregationServer {
 
             while (true) {
                 Socket client_socket = serverSocket.accept(); // wait for connections
-                HandleRequest handleRequest = new HandleRequest(client_socket, lamport_clock); // Use class to create a
+                HandleRequest handleRequest = new HandleRequest(client_socket); // Use class to create a
                                                                                                // new thread so
                 // threads can be handled seperately
                 Thread thread = new Thread(handleRequest);
@@ -48,12 +45,10 @@ public class AggregationServer {
 class HandleRequest extends Thread { // Runnable allows thread execution
     // socket here as a variable in the class
     private Socket client_socket; // socket
-    private LamportClock lamport_clock;
 
     // function call to handle get requests
-    public HandleRequest(Socket client_socket, LamportClock lamport_clock) {
+    public HandleRequest(Socket client_socket) {
         this.client_socket = client_socket; // socket connection
-        this.lamport_clock = lamport_clock;
     }
 
     public void run() {
@@ -71,34 +66,23 @@ class HandleRequest extends Thread { // Runnable allows thread execution
 
             String total_message = request_from_file.toString(); // complete message as string
 
+            int current_time = LamportClock.getCurrentTime();
+            LamportClock.updateTime(current_time);
+            current_time = LamportClock.getCurrentTime();
+            handleTime(request_from_file, current_time);
+
             if (total_message.contains("PUT")) { // Call put function for put request from contentserver
                 System.out.println("PUT request received");
-
-                int current_time = lamport_clock.getCurrentTime();
-
-                String[] lines_from_read = total_message.split("\r\n"); //Read through the received message and get timestamp
-                for (String line : lines_from_read ){ //iterate through lines
-                    if (line.startsWith("Lamport-Clock") ){
-                        current_time = Integer.parseInt(line.split(":")[1].trim());
-                        break;
-                    }
-                }
-
-                lamport_clock.updateTime(current_time); //update the timer
-
-                current_time = lamport_clock.getCurrentTime(); //update with actual current time
-
-                handleTime(request_from_file, current_time); //ensure that all threads are ordered correctly
-
                 putResponse(write, request_from_file, current_time); //call put procedures
 
-                updateTimers(current_time); //confirm that thread has finished put request and add timer to array
-
             } else if (total_message.contains("GET")) { // call get for request from client
+
                 getResponse(write, request_from_file);
             } else {
                 write.println("HTTP/1.1 400"); // ERROR
             }
+
+            updateTimers(current_time);
 
             Thread.sleep(30000); // Sleep for 30 seconds
             Boolean check_alive = checkAlive(write, read_file); // check if content server is still alive
@@ -118,7 +102,6 @@ class HandleRequest extends Thread { // Runnable allows thread execution
     public void putResponse(PrintWriter write, StringBuilder read, int time) { // takes read and write
         // Check if there is an Aggregation Database if not create the file
         File database = new File("aggregationDatabase.txt");
-        System.out.println("continuing from waking up....");
 
         if (database.exists()) { // first check if file exists
             if (database.length() == 0) { // If file exists but has no content
@@ -162,7 +145,6 @@ class HandleRequest extends Thread { // Runnable allows thread execution
                 }
             }
         } else {
-            System.out.println("detecting lmaport yes ");
             System.out.println("Aggregation Database does not exist. Creating database.");
             createFile();
             boolean check = insertIntoFile(read);
@@ -232,7 +214,7 @@ class HandleRequest extends Thread { // Runnable allows thread execution
                             "Server has not responded to GET request. Closing connection and removing old data.");
                     timer.cancel();
                 }
-            }, 5000); // if after 5 seconds there is no response. Call timer
+            }, 10000); // if after 5 seconds there is no response. Call timer
 
             while ((incoming_message = output.readLine()) != null) { // read outputs from content server
                 timer.cancel(); // if a message is receive cancel the timer
@@ -339,7 +321,6 @@ class HandleRequest extends Thread { // Runnable allows thread execution
 
             }
 
-            System.out.println(all_data);
             reader.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -396,13 +377,8 @@ class HandleRequest extends Thread { // Runnable allows thread execution
     // Adds the lamport timer of the current thread to an array to signify that it
     // has completed its task
     public void updateTimers(int time) {
-        System.out.println("updating timers \n");
         synchronized (AggregationServer.lock) { // Use the lock object
             AggregationServer.timers.add(time); // append to end of list
-            for (int i = 0; i < AggregationServer.timers.size(); i++) {
-                System.out.println("Timers are: ");
-                System.out.println((AggregationServer.timers.get(i)));
-            }
             AggregationServer.lock.notifyAll(); // Notify all waiting threads
         }
     }
@@ -419,31 +395,24 @@ class HandleRequest extends Thread { // Runnable allows thread execution
             if (detect_lamport.contains("IDS9999") & detect_weather.contains("Sunny")) { // Used for testing lamport
                                                                                          // clocks to simulate increased
                                                                                          // wait time
-                System.out.println("sleeping.... \n");
                 Thread.sleep(7000); // Sleep for 15 seconds, simulates increased wait time for Sydney weather
                                     // station
-                System.out.println("waking up!.... \n");
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-        // System.out.print(!AggregationServer.timers.contains(currentTime - 1));
-        // System.out.print(AggregationServer.timers.contains(0));
 
         synchronized (AggregationServer.lock) {
             // If the list does not contain the previous thread clock, it means that it has
             // not complete its task
             while (!AggregationServer.timers.contains(currentTime - 1)) {
                 try {
-                    System.out.println("debug: checking again.... \n");
                     AggregationServer.lock.wait();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
 
-            System.out.println("Going to handle put request....");
             return; // Continue with the rest of the code
         }
     }
