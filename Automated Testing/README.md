@@ -60,3 +60,13 @@ The aggregation server searches the database for this ID, then overwrites the ol
 ----------------------------------------------------------------------------
 
 -------TEST NINE : LAMPORT CLOCKS -------------
+A content server from Sydney sends a PUT Request. 
+A content server from Sydney sends a PUT Request with updated information.
+The first content server has a processing delay of 15 seconds. 
+The thread handling the second content server PUT request is delayed.
+The aggregation server finishes handling the thread of the first content server.
+The thread handling the second content server is no longer delayed, it completes.
+A client server makes it get request. 
+The aggregation server sends the data to the client.
+The client views the data, the data is from the second content server. 
+--------------------------------------------------------------------------------

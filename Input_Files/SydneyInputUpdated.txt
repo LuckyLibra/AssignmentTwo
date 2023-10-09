@@ -1,0 +1,17 @@
+id:IDS9999
+name:Sydney (Gadigal)
+state: New South Wales
+time_zone:CST
+lat:-34.9
+lon:138.6
+local_date_time:15/04:05pm
+local_date_time_full:20230715160000
+air_temp:11
+apparent_t:9
+cloud:Raining
+dewpt:5.7
+press:1023.9
+rel_hum:80
+wind_dir:W
+wind_spd_kmh:14
+wind_spd_kt:7

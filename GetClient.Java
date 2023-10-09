@@ -10,7 +10,7 @@ public class GetClient {
         // lamport clock
         String server_name = args[0]; // "http://servername.domain.domain:portnumber", "http://servername:portnumber",
                                       // "servername:portnumber"
-        int lamport_clock = 0; // lamport clock initialised at 0 to begin
+        LamportClock lamport_clock = new LamportClock(); // initialise lamport clock here
         String station_id = null;
 
         if (args.length > 1) {
@@ -32,10 +32,11 @@ public class GetClient {
             System.out.println("Socket is running, seeking to connect to " + host_name + " " + port_num);
 
             if (station_id != null) { // if station ID was used as an argument
-                output.println("GET /weather.json/" + station_id + " HTTP/1.1\r\n" +"User-Agent: ATOMClient/1/0\r\n" +
-                                "Content-Type: application/json\r\n");
+                output.println("GET /weather.json/" + station_id + " HTTP/1.1\r\n" + "User-Agent: ATOMClient/1/0\r\n" +
+                        "Content-Type: application/json\r\n");
             } else { // If no station ID retrieve all json data
-                output.println("GET /weather.json HTTP/1.1\r\n" + "User-Agent: ATOMClient/1/0\r\n" + "Content-Type: application/json\r\n");
+                output.println("GET /weather.json HTTP/1.1\r\n" + "User-Agent: ATOMClient/1/0\r\n"
+                        + "Content-Type: application/json\r\n");
             }
             System.out.println("GET request sent to server! ");
 
@@ -46,7 +47,7 @@ public class GetClient {
 
             try {
                 Thread.sleep(10000);
-            } catch (InterruptedException e){
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 

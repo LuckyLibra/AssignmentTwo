@@ -1,18 +1,26 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.*;
 import java.util.regex.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AggregationServer {
+    public static List<Integer> timers = new ArrayList<>();
+
+    static {
+        timers.add(0); // Initialize the list with an initial value of 0
+    }
+
+    public static final Object lock = new Object(); // prepare lock
+
     public static void main(String[] args) {
         int port = 4567; // default number
-        int lamport_clock = 0; // lamport clock
+        LamportClock lamport_clock = new LamportClock(); // initialise lamport clock here
 
         if (args.length > 0) { // If a port number was in the command line
             port = Integer.parseInt(args[0]); // Update port number to command line arg
@@ -24,10 +32,10 @@ public class AggregationServer {
 
             while (true) {
                 Socket client_socket = serverSocket.accept(); // wait for connections
-                HandleRequest handleRequest = new HandleRequest(client_socket); // Use class to create a new thread so
-                                                                                // threads can be handled seperately
+                HandleRequest handleRequest = new HandleRequest(client_socket, lamport_clock); // Use class to create a
+                                                                                               // new thread so
+                // threads can be handled seperately
                 Thread thread = new Thread(handleRequest);
-                lamport_clock++;
                 thread.start();
             }
         } catch (IOException e) {
@@ -39,10 +47,12 @@ public class AggregationServer {
 class HandleRequest extends Thread { // Runnable allows thread execution
     // socket here as a variable in the class
     private Socket client_socket; // socket
+    private LamportClock lamport_clock;
 
     // function call to handle get requests
-    public HandleRequest(Socket client_socket) {
+    public HandleRequest(Socket client_socket, LamportClock lamport_clock) {
         this.client_socket = client_socket; // socket connection
+        this.lamport_clock = lamport_clock;
     }
 
     public void run() {
@@ -62,7 +72,17 @@ class HandleRequest extends Thread { // Runnable allows thread execution
 
             if (total_message.contains("PUT")) { // Call put function for put request from contentserver
                 System.out.println("PUT request received");
-                putResponse(write, request_from_file);
+
+                this.lamport_clock.increaseTime(); // increase lamport clock time
+                int current_time = lamport_clock.getCurrentTime();
+                System.out.println(current_time);
+
+                handleTime(request_from_file, current_time);
+
+                putResponse(write, request_from_file, current_time);
+
+                updateTimers(current_time);
+
             } else if (total_message.contains("GET")) { // call get for request from client
                 getResponse(write, request_from_file);
             } else {
@@ -84,9 +104,10 @@ class HandleRequest extends Thread { // Runnable allows thread execution
     }
 
     // Determines what must occur after a put response has been called
-    public void putResponse(PrintWriter write, StringBuilder read) { // takes read and write
+    public void putResponse(PrintWriter write, StringBuilder read, int time) { // takes read and write
         // Check if there is an Aggregation Database if not create the file
         File database = new File("aggregationDatabase.txt");
+        System.out.println("continuing from waking up....");
 
         if (database.exists()) { // first check if file exists
             if (database.length() == 0) { // If file exists but has no content
@@ -103,6 +124,7 @@ class HandleRequest extends Thread { // Runnable allows thread execution
                                               // overwrite
                 try {
                     String request_id = findRequestID(read);
+
                     BufferedReader read_database = new BufferedReader(new FileReader(database)); // Read database
                     String line_from_database;
                     boolean host_id_exists = false;
@@ -118,6 +140,7 @@ class HandleRequest extends Thread { // Runnable allows thread execution
                         removeFromDatabase(request_id); // ID to remove from database
                         insertIntoFile(read);
                         write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
+
                     } else {
                         insertIntoFile(read); // If ID not present, add to database
                         write.println("HTTP/1.1 200 OK "); // Sends 200 OK Response to content server
@@ -128,6 +151,7 @@ class HandleRequest extends Thread { // Runnable allows thread execution
                 }
             }
         } else {
+            System.out.println("detecting lmaport yes ");
             System.out.println("Aggregation Database does not exist. Creating database.");
             createFile();
             boolean check = insertIntoFile(read);
@@ -255,6 +279,20 @@ class HandleRequest extends Thread { // Runnable allows thread execution
         return "";
     }
 
+    // When testing lamport, we make it so that any thread from Sydney with the
+    // weather as 'sunny' will take longer to process
+    // This detects if we are testing lamport by determining if the sunny thread
+    // exists
+    public String detectLamportTest(StringBuilder read) {
+        Pattern regex = Pattern.compile("cloud:" + "([^\\n]+)");
+        Matcher id_value = regex.matcher(read);
+
+        if (id_value.find()) {
+            return id_value.group(1).trim();
+        }
+        return "";
+    }
+
     // Used to remove data from the database based on the string provided, this can
     // be used when removing data with duplicate id's, as well as removing data from
     // a weather station
@@ -342,6 +380,61 @@ class HandleRequest extends Thread { // Runnable allows thread execution
             }
         }
         return null; // No data found
+    }
+
+    // Adds the lamport timer of the current thread to an array to signify that it
+    // has completed its task
+    public void updateTimers(int time) {
+        System.out.println("updating timers \n");
+        synchronized (AggregationServer.lock) { // Use the lock object
+            AggregationServer.timers.add(time); // append to end of list
+            for (int i = 0; i < AggregationServer.timers.size(); i++) {
+                System.out.println("Timers are: ");
+                System.out.println((AggregationServer.timers.get(i)));
+            }
+            AggregationServer.lock.notifyAll(); // Notify all waiting threads
+        }
+    }
+
+    // Handle time is a function which delays a thread until it can continue in the
+    // correct order,
+    // that is, the previous threads have completed and it obeys the laws of lamport
+    // clocks
+    public void handleTime(StringBuilder read, int currentTime) {
+        String detect_lamport = findRequestID(read); // Determine if we need to add wait time if we're testing lamport
+        String detect_weather = detectLamportTest(read);
+
+        try {
+            if (detect_lamport.contains("IDS9999") & detect_weather.contains("Sunny")) { // Used for testing lamport
+                                                                                         // clocks to simulate increased
+                                                                                         // wait time
+                System.out.println("sleeping.... \n");
+                Thread.sleep(7000); // Sleep for 15 seconds, simulates increased wait time for Sydney weather
+                                    // station
+                System.out.println("waking up!.... \n");
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // System.out.print(!AggregationServer.timers.contains(currentTime - 1));
+        // System.out.print(AggregationServer.timers.contains(0));
+
+        synchronized (AggregationServer.lock) {
+            // If the list does not contain the previous thread clock, it means that it has
+            // not complete its task
+            while (!AggregationServer.timers.contains(currentTime - 1)) {
+                try {
+                    System.out.println("debug: checking again.... \n");
+                    AggregationServer.lock.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            System.out.println("Going to handle put request....");
+            return; // Continue with the rest of the code
+        }
     }
 
 }

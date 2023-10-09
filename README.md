@@ -10,8 +10,9 @@ In a new terminal type "java AggregationServer [optional argument: PORT]"
 
 To start the Content Server:
 In a new terminal type "java ContentServer [host_name] [file_location] "
-                        ex. java ContentServer localhost:4567 testInputFile.txt
+                        ex. java ContentServer localhost:4567 Input_Files/AdelaideInput.txt
 
 To start the client Server:
-In a new terminal type "java GetClient [host_name] "
-                        ex. java GetClient localhost:4567
+In a new terminal type "java GetClient [host_name] [optional argument: ID]"
+                        (without ID) ex. java GetClient localhost:4567
+                        (with ID) ex. java GetClient localhost:4567 IDS12345
