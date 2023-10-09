@@ -13,6 +13,8 @@ public class LamportClock {
         time++;
     }
 
-
+    public synchronized void updateTime(int receivedTime) {
+        time = Math.max(time, receivedTime) + 1;
+    }
 
 }

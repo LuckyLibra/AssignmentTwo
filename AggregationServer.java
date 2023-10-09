@@ -14,6 +14,7 @@ public class AggregationServer {
 
     static {
         timers.add(0); // Initialize the list with an initial value of 0
+        timers.add(1);
     }
 
     public static final Object lock = new Object(); // prepare lock
@@ -73,15 +74,25 @@ class HandleRequest extends Thread { // Runnable allows thread execution
             if (total_message.contains("PUT")) { // Call put function for put request from contentserver
                 System.out.println("PUT request received");
 
-                this.lamport_clock.increaseTime(); // increase lamport clock time
                 int current_time = lamport_clock.getCurrentTime();
-                System.out.println(current_time);
 
-                handleTime(request_from_file, current_time);
+                String[] lines_from_read = total_message.split("\r\n"); //Read through the received message and get timestamp
+                for (String line : lines_from_read ){ //iterate through lines
+                    if (line.startsWith("Lamport-Clock") ){
+                        current_time = Integer.parseInt(line.split(":")[1].trim());
+                        break;
+                    }
+                }
 
-                putResponse(write, request_from_file, current_time);
+                lamport_clock.updateTime(current_time); //update the timer
 
-                updateTimers(current_time);
+                current_time = lamport_clock.getCurrentTime(); //update with actual current time
+
+                handleTime(request_from_file, current_time); //ensure that all threads are ordered correctly
+
+                putResponse(write, request_from_file, current_time); //call put procedures
+
+                updateTimers(current_time); //confirm that thread has finished put request and add timer to array
 
             } else if (total_message.contains("GET")) { // call get for request from client
                 getResponse(write, request_from_file);

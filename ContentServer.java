@@ -57,9 +57,11 @@ public class ContentServer {
             socket.setSoTimeout(10000);
             System.out.println("Socket is running, seeking to connect to " + host_name + " " + port_num);
             
+            clock++;
             // send data here
             output.println("PUT /weather.json HTTP/1.1\r\n" + "User-Agent: ATOMClient/1/0\r\n"
                     + "Content-Type: application/json\r\n" +
+                    "Lamport-Clock: " + clock + "\r\n" +
                     "Content-Length: " + json_contents.length() + "\r\n " + json_contents);
 
             System.out.println("PUT Request successfully sent \n ");
